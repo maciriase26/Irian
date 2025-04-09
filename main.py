@@ -1,3 +1,4 @@
+# Import ComfyUI option manager to handle command-line arguments
 import comfy.options
 comfy.options.enable_args_parsing()
 
@@ -11,14 +12,19 @@ import itertools
 import utils.extra_config
 import logging
 
+
+# This block only runs if this file is being executed directly (not imported as a module)
 if __name__ == "__main__":
     #NOTE: These do not do anything on core ComfyUI which should already have no communication with the internet, they are for custom nodes.
     os.environ['HF_HUB_DISABLE_TELEMETRY'] = '1'
     os.environ['DO_NOT_TRACK'] = '1'
 
 
+# Set up the logging system to control what info appears in the terminal
 setup_logger(log_level=args.verbose, use_stdout=args.log_stdout)
 
+
+# This function configures folders for saving models, inputs, outputs, etc.
 def apply_custom_paths():
     # extra model paths
     extra_model_paths_config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "extra_model_paths.yaml")
@@ -54,6 +60,8 @@ def apply_custom_paths():
         folder_paths.set_user_directory(user_dir)
 
 
+
+# This function looks for and runs any 'prestartup_script.py' in custom node folders
 def execute_prestartup_script():
     def execute_script(script_path):
         module_name = os.path.splitext(script_path)[0]
@@ -108,6 +116,8 @@ import gc
 if os.name == "nt":
     logging.getLogger("xformers").addFilter(lambda record: 'A matching Triton is not available' not in record.getMessage())
 
+
+# This block only runs if this file is being executed directly (not imported as a module)
 if __name__ == "__main__":
     if args.cuda_device is not None:
         os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda_device)
@@ -131,6 +141,8 @@ if args.windows_standalone_build:
     except:
         pass
 
+
+# Import core ComfyUI tools and modules used for running the app
 import comfy.utils
 
 import execution
@@ -151,6 +163,8 @@ def cuda_malloc_warning():
             logging.warning("\nWARNING: this card most likely does not support cuda-malloc, if you get \"CUDA error\" please run ComfyUI with: --disable-cuda-malloc\n")
 
 
+
+# This is the thread that handles image generation prompts
 def prompt_worker(q, server_instance):
     current_time: float = 0.0
     e = execution.PromptExecutor(server_instance, lru_size=args.cache_lru)
@@ -207,6 +221,8 @@ def prompt_worker(q, server_instance):
                 need_gc = False
 
 
+
+# This function starts the ComfyUI server and keeps it running
 async def run(server_instance, address='', port=8188, verbose=True, call_on_start=None):
     addresses = []
     for addr in address.split(","):
@@ -216,6 +232,8 @@ async def run(server_instance, address='', port=8188, verbose=True, call_on_star
     )
 
 
+
+# This lets the server show progress updates and preview images during generation
 def hijack_progress(server_instance):
     def hook(value, total, preview_image):
         comfy.model_management.throw_exception_if_processing_interrupted()
@@ -228,12 +246,16 @@ def hijack_progress(server_instance):
     comfy.utils.set_progress_bar_global_hook(hook)
 
 
+
+# This function clears any temporary files from the temp folder
 def cleanup_temp():
     temp_dir = folder_paths.get_temp_directory()
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+
+# This function puts everything together and starts ComfyUI
 def start_comfyui(asyncio_loop=None):
     """
     Starts the ComfyUI server using the provided asyncio event loop or creates a new one.
@@ -290,11 +312,14 @@ def start_comfyui(asyncio_loop=None):
     return asyncio_loop, prompt_server, start_all
 
 
+
+# This block only runs if this file is being executed directly (not imported as a module)
 if __name__ == "__main__":
     # Running directly, just start ComfyUI.
     event_loop, _, start_all_func = start_comfyui()
     try:
-        event_loop.run_until_complete(start_all_func())
+        # Start running the server's event loop (this keeps ComfyUI alive)
+event_loop.run_until_complete(start_all_func())
     except KeyboardInterrupt:
         logging.info("\nStopped server")
 
